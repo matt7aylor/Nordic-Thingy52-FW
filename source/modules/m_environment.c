@@ -62,7 +62,8 @@ typedef enum
     GAS_STATE_ACTIVE
 }gas_state_t;
 
-#define M_GAS_CALIB_INTERVAL_MS (1000 * 60 * 60) ///< Humidity and temperature calibration interval for the gas sensor [ms].
+#define M_GAS_CALIB_INTERVAL_MS (1000 * 30 * 1) ///< Humidity and temperature calibration interval for the gas sensor [ms].
+//#define M_GAS_CALIB_INTERVAL_MS (1000 * 60 * 60) ///< Humidity and temperature calibration interval for the gas sensor [ms].
 #define M_GAS_BASELINE_WRITE_MS (1000 * 60 * 30) ///< Stored baseline calibration delay for the gas sensor [ms].
 
 static void temperature_timeout_handler(void * p_context); ///< Temperature handler, forward declaration.
@@ -388,13 +389,18 @@ static void gas_calib_timeout_handler(void * p_context)
         }
 
         m_gas_state = GAS_STATE_ACTIVE;
+        m_calib_gas_sensor = true;
 
         (void)app_timer_stop(gas_calib_timer_id);
-
+        err_code = app_timer_start(gas_calib_timer_id,
+                                   APP_TIMER_TICKS(M_GAS_CALIB_INTERVAL_MS),
+                                   NULL);
+        APP_ERROR_CHECK(err_code);
     }
     else if (m_gas_state == GAS_STATE_ACTIVE)
     {
         // For later implementation of gas sensor humidity and temperature calibration.
+        m_calib_gas_sensor = true;
     }
     else
     {
@@ -623,6 +629,8 @@ static uint32_t gas_start(void)
     RETURN_IF_ERROR(err_code);
 
     m_gas_state = GAS_STATE_WARMUP;
+    m_temp_humid_for_gas_calibration = true;
+    m_calib_gas_sensor = true;
 
     return app_timer_start(gas_calib_timer_id,
                            APP_TIMER_TICKS(M_GAS_BASELINE_WRITE_MS),
